@@ -56,3 +56,12 @@ Variables: `POS_ADAPTERS=simulated`, `POS_SIM_PRINT_INTERVAL_MS` (trabajos de im
 - Lectura del catálogo: cualquier usuario con sesión. Escritura: permiso `catalog.manage` (solo admin).
 - Campos reservados sin pantalla: `volumePricing` y claves SAT en variantes.
 - El código de barras de `quick_codes` (T3.1) deberá validar que no choque con `barcodes`.
+
+## T1.3 Inventario por movimientos
+
+- `inventory_movements`: cantidad con signo (entrada +, venta/consumo −, ajuste y conteo ±); stock = `SUM(quantity)`, nunca una columna. Tipos: venta, cancelación, ajuste, entrada, consumo, conteo.
+- Inmutabilidad en la base de datos: triggers de SQLite (migración `0003_immutable_triggers`) rechazan UPDATE y DELETE en `inventory_movements` y `audit_log`. Corregir = movimiento nuevo.
+- `insertMovement(tx, actor, movimiento)` se llama dentro de la transacción de quien lo origina (ventas, impresiones, conteos) para cumplir la regla de una sola transacción.
+- Ajustes: motivo obligatorio y registro en `audit_log` con `before`/`after`. Solo `inventory.adjust` (admin). El stock puede quedar negativo (se vende con 0 y solo se avisa).
+- Solo las variantes de productos con `controlsInventory` admiten movimientos; los servicios responden 409.
+- El manejo de errores de negocio (catálogo, inventario) está centralizado en `app.ts`.

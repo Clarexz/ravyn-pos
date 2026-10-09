@@ -50,3 +50,48 @@ describe('db inicial', () => {
     expect(() => db.insert(stores).values({ tenantId: 'no-existe', name: 'x' }).run()).toThrow();
   });
 });
+
+describe('inmutabilidad', () => {
+  it('audit_log e inventory_movements no se pueden editar ni borrar', async () => {
+    const { inventoryMovements, productVariants, products } = await import('./schema/index.js');
+    const { db } = setup();
+    const [tenant] = db.insert(tenants).values({ name: 'T' }).returning().all();
+    const [store] = db.insert(stores).values({ tenantId: tenant!.id, name: 'S' }).returning().all();
+    const scope = { tenantId: tenant!.id, storeId: store!.id };
+    const [product] = db
+      .insert(products)
+      .values({ ...scope, name: 'P', priceCents: 100 })
+      .returning()
+      .all();
+    const [variant] = db
+      .insert(productVariants)
+      .values({ ...scope, productId: product!.id })
+      .returning()
+      .all();
+    const [movement] = db
+      .insert(inventoryMovements)
+      .values({ ...scope, variantId: variant!.id, type: 'entry', quantity: 5 })
+      .returning()
+      .all();
+    const [log] = db
+      .insert(auditLog)
+      .values({ ...scope, action: 'a', entity: 'e' })
+      .returning()
+      .all();
+
+    expect(() =>
+      db
+        .update(inventoryMovements)
+        .set({ quantity: 99 })
+        .where(eq(inventoryMovements.id, movement!.id))
+        .run(),
+    ).toThrow(/inmutable/);
+    expect(() =>
+      db.delete(inventoryMovements).where(eq(inventoryMovements.id, movement!.id)).run(),
+    ).toThrow(/inmutable/);
+    expect(() =>
+      db.update(auditLog).set({ action: 'x' }).where(eq(auditLog.id, log!.id)).run(),
+    ).toThrow(/inmutable/);
+    expect(() => db.delete(auditLog).where(eq(auditLog.id, log!.id)).run()).toThrow(/inmutable/);
+  });
+});

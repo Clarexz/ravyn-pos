@@ -67,3 +67,4 @@ export const auditLog = sqliteTable(
   (t) => [index('audit_store_created_idx').on(t.storeId, t.createdAt)],
 );
 export * from './catalog.js';
+export * from './inventory.js';

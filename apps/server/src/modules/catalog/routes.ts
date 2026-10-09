@@ -60,15 +60,6 @@ export function registerCatalogRoutes(
   const read = authGuard(auth);
   const write = requirePermission(auth, 'catalog.manage');
 
-  // Traduce errores del servicio a respuestas HTTP.
-  app.setErrorHandler((err, _req, reply) => {
-    if (err instanceof CatalogError) {
-      const status = err.code === 'not_found' ? 404 : 409;
-      return reply.code(status).send({ error: err.message, code: err.code });
-    }
-    return reply.send(err);
-  });
-
   app.get('/api/categories', { preHandler: read }, async (req) => ({
     categories: catalog.listCategories(req.user!),
   }));
@@ -134,4 +125,10 @@ export function registerCatalogRoutes(
     const params = parse(idParams, req.params, reply);
     if (params) return catalog.removeBarcode(req.user!, params.id);
   });
+}
+
+/** Estado HTTP para errores del catálogo; undefined si el error no es de este módulo. */
+export function catalogErrorStatus(err: unknown): number | undefined {
+  if (!(err instanceof CatalogError)) return undefined;
+  return err.code === 'not_found' ? 404 : 409;
 }

@@ -15,6 +15,20 @@
       "when": 1791554104640,
       "tag": "0001_married_blonde_phantom",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "6",
+      "when": 1791554302054,
+      "tag": "0002_polite_scalphunter",
+      "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "6",
+      "when": 1791554302611,
+      "tag": "0003_immutable_triggers",
+      "breakpoints": true
     }
   ]
 }

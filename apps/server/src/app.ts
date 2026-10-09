@@ -7,8 +7,10 @@ import type { PosDb } from '@pos/db';
 import type { Adapters } from './adapters/index.js';
 import { registerAuthRoutes } from './modules/auth/routes.js';
 import { AuthService } from './modules/auth/service.js';
-import { registerCatalogRoutes } from './modules/catalog/routes.js';
+import { catalogErrorStatus, registerCatalogRoutes } from './modules/catalog/routes.js';
 import { CatalogService } from './modules/catalog/service.js';
+import { inventoryErrorStatus, registerInventoryRoutes } from './modules/inventory/routes.js';
+import { InventoryService } from './modules/inventory/service.js';
 
 export interface AppOptions {
   /** Carpeta con la SPA compilada (apps/pos/dist). Si no existe, solo se sirve la API. */
@@ -24,11 +26,22 @@ export async function buildApp(options: AppOptions = {}): Promise<FastifyInstanc
 
   app.get('/api/health', async () => ({ ok: true, service: 'pos-server', time: Date.now() }));
 
+  // Errores de negocio conocidos -> respuesta HTTP con mensaje en español.
+  app.setErrorHandler((err, _req, reply) => {
+    const status = catalogErrorStatus(err) ?? inventoryErrorStatus(err);
+    if (status) {
+      const { message, code } = err as { message: string; code?: string };
+      return reply.code(status).send({ error: message, code });
+    }
+    return reply.send(err);
+  });
+
   if (options.db) {
     const auth = new AuthService(options.db);
     app.decorate('auth', auth);
     registerAuthRoutes(app, auth);
     registerCatalogRoutes(app, auth, new CatalogService(options.db));
+    registerInventoryRoutes(app, auth, new InventoryService(options.db));
   }
 
   const { adapters } = options;
