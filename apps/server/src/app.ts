@@ -12,6 +12,8 @@ import { registerCatalogRoutes } from './modules/catalog/routes.js';
 import { CatalogService } from './modules/catalog/service.js';
 import { registerConsumptionRoutes } from './modules/consumption/routes.js';
 import { ConsumptionService } from './modules/consumption/service.js';
+import { registerImportRoutes } from './modules/import/routes.js';
+import { ImportService } from './modules/import/service.js';
 import { registerInventoryRoutes } from './modules/inventory/routes.js';
 import { InventoryService } from './modules/inventory/service.js';
 
@@ -44,6 +46,7 @@ export async function buildApp(options: AppOptions = {}): Promise<FastifyInstanc
     registerCatalogRoutes(app, auth, new CatalogService(options.db));
     registerInventoryRoutes(app, auth, new InventoryService(options.db));
     registerConsumptionRoutes(app, auth, new ConsumptionService(options.db));
+    registerImportRoutes(app, auth, new ImportService(options.db));
   }
 
   const { adapters } = options;

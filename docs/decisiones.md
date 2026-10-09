@@ -73,3 +73,14 @@ Variables: `POS_ADAPTERS=simulated`, `POS_SIM_PRINT_INTERVAL_MS` (trabajos de im
 - Los insumos deben existir y controlar inventario. No hay recetas anidadas: un insumo no se expande a su propia receta.
 - `ConsumptionService.consume()` / `consumePrint()` reciben la transacción del llamador y generan movimientos `consumption` (cantidad negativa, con `refType`/`refId` del cobro o impresión). Se usan en T6.3 (cobrar o ignorar impresión) y en la venta de servicios. No hay endpoint de consumo: solo ocurre dentro de operaciones que ya tienen su transacción.
 - El precio cobrado por página sale de `print_prices`, no del catálogo de productos.
+
+## T1.5 Importación Excel/CSV
+
+- Archivo `.xlsx` o `.csv` (delimitador `,` o `;`, con o sin BOM, detectado solo). Se envía como cuerpo binario con su `Content-Type`; no se usa multipart. Límite 10 MB.
+- Columnas: `producto`, `variante`, `codigo`, `precio`, `costo`, `stock`, `categoria`. Solo `producto` y `precio` son obligatorias. Encabezados sin importar acentos, mayúsculas ni orden. Plantilla descargable en `GET /api/import/template?format=xlsx|csv`.
+- Una fila = una variante. Identidad: primero por **código**; si no hay, por **producto + variante** (sin distinguir mayúsculas). Si el código pertenece a otro producto es error, no se renombra nada.
+- Todo o nada: `preview` simula y revierte siempre; `apply` guarda solo si no hay un solo error (422 con el detalle por fila y columna).
+- `stock` es la existencia **deseada** (absoluta): se registra un movimiento `adjustment` por la diferencia ("Importación de inventario"). Reimportar el mismo archivo no genera movimientos. Se ignora en servicios (sin control de inventario).
+- Precio: si coincide con el del producto, la variante lo hereda; si no, queda como precio propio. Un cambio de precio en una variante existente escribe `audit_log` (`price.change`, `source: import`); cada importación aplicada escribe `import.apply`.
+- Las categorías se crean si no existen. Una reimportación idéntica reporta 0 cambios.
+- Dependencias: `exceljs` (xlsx) y `papaparse` (csv). `@types/node@22` fijado porque `exceljs` arrastra `@types/node@14`.
