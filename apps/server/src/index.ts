@@ -1,5 +1,7 @@
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import fs from 'node:fs';
+import { createDb, runMigrations } from '@pos/db';
 import { createAdapters } from './adapters/index.js';
 import { buildApp } from './app.js';
 
@@ -8,7 +10,12 @@ const port = Number(process.env.POS_PORT ?? 3000);
 
 const dataDir = process.env.POS_DATA_DIR ?? path.join(process.cwd(), 'data');
 
+fs.mkdirSync(dataDir, { recursive: true });
+const { db } = createDb(process.env.POS_DB_PATH ?? path.join(dataDir, 'pos.db'));
+runMigrations(db);
+
 const app = await buildApp({
+  db,
   logger: true,
   adapters: createAdapters({
     POS_ADAPTERS: process.env.POS_ADAPTERS,

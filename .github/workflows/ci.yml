@@ -21,8 +21,9 @@ jobs:
           cache: pnpm
       - run: pnpm install --frozen-lockfile
       - run: pnpm lint
-      - run: pnpm typecheck
+      # Build antes del typecheck: el servidor importa los paquetes del workspace ya compilados.
       - run: pnpm build
+      - run: pnpm typecheck
       - run: pnpm test
 
   package-windows:

@@ -3,13 +3,17 @@ import path from 'node:path';
 import fastifyStatic from '@fastify/static';
 import fastifyWebsocket from '@fastify/websocket';
 import Fastify, { type FastifyInstance } from 'fastify';
+import type { PosDb } from '@pos/db';
 import type { Adapters } from './adapters/index.js';
+import { registerAuthRoutes } from './modules/auth/routes.js';
+import { AuthService } from './modules/auth/service.js';
 
 export interface AppOptions {
   /** Carpeta con la SPA compilada (apps/pos/dist). Si no existe, solo se sirve la API. */
   posDistDir?: string;
   logger?: boolean;
   adapters?: Adapters;
+  db?: PosDb;
 }
 
 export async function buildApp(options: AppOptions = {}): Promise<FastifyInstance> {
@@ -17,6 +21,12 @@ export async function buildApp(options: AppOptions = {}): Promise<FastifyInstanc
   await app.register(fastifyWebsocket);
 
   app.get('/api/health', async () => ({ ok: true, service: 'pos-server', time: Date.now() }));
+
+  if (options.db) {
+    const auth = new AuthService(options.db);
+    app.decorate('auth', auth);
+    registerAuthRoutes(app, auth);
+  }
 
   const { adapters } = options;
   const broadcast = (message: unknown) => {

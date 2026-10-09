@@ -15,6 +15,9 @@
   "dependencies": {
     "@fastify/static": "^10.1.5",
     "@fastify/websocket": "^11.3.3",
+    "@pos/core": "workspace:*",
+    "@pos/db": "workspace:*",
+    "drizzle-orm": "^0.45.4",
     "fastify": "^5.12.5",
     "zod": "^4.6.5"
   },

@@ -15,7 +15,7 @@
     "test": "pnpm -r --if-present test",
     "db:migrate": "pnpm --filter @pos/db db:migrate",
     "db:generate": "pnpm --filter @pos/db db:generate",
-    "dev": "concurrently -n server,pos -c blue,green \"pnpm --filter @pos/server dev\" \"pnpm --filter @pos/pos dev\""
+    "dev": "pnpm --filter @pos/core --filter @pos/db build && concurrently -n server,pos -c blue,green \"pnpm --filter @pos/server dev\" \"pnpm --filter @pos/pos dev\""
   },
   "devDependencies": {
     "@eslint/js": "^9.0.0",

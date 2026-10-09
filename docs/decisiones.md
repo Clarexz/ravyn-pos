@@ -38,3 +38,11 @@ Variables: `POS_ADAPTERS=simulated`, `POS_SIM_PRINT_INTERVAL_MS` (trabajos de im
 - Node 22 LTS en lugar de 20 (Node 20 ya salió de soporte). El mismo Node se empaqueta con el instalador, porque el binario nativo de `better-sqlite3` depende de su versión.
 - `.github/workflows/ci.yml`: lint, typecheck, build y pruebas en macOS y Windows; job `package-windows` genera el `.exe` con Inno Setup (`installer/pos.iss`).
 - El instalador por ahora solo copia archivos y crea el acceso directo; servicio, autoarranque y registro de impresión entran en T7.2.
+
+## T1.1 Acceso y roles
+
+- PIN de 4 a 6 dígitos con hash `scrypt` de `node:crypto` (sin argon2/bcrypt: evita otra dependencia nativa en el instalador de Windows). Un PIN corto es débil por naturaleza; la defensa real es el bloqueo: 5 intentos fallidos → 5 min.
+- Inicio de sesión: se elige el usuario y se teclea el PIN (`POST /api/auth/login {userId, pin}`). Sesiones en memoria con token `Bearer` y vigencia deslizante de 12 h; varias conviven para el cambio rápido de usuario.
+- Matriz de permisos en `packages/core/src/permissions.ts` (`allow` / `admin_pin` / `deny`). `requirePermission` responde 403 con `requiresAdminPin: true` cuando el empleado puede proceder con PIN de admin; el PIN se valida en `POST /api/auth/admin-approval` (con su propio bloqueo).
+- `POST /api/setup` crea negocio, tienda y primer admin, solo si no existe ningún negocio.
+- Pendiente: la bitácora de cancelaciones/descuentos aprobados con PIN se escribe en T2.6; cambiar/desactivar usuarios llega con la pantalla de administración.
