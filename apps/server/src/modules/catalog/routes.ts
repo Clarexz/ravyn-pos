@@ -2,7 +2,7 @@ import type { FastifyInstance, FastifyReply } from 'fastify';
 import { z } from 'zod';
 import { authGuard, requirePermission } from '../auth/routes.js';
 import type { AuthService } from '../auth/service.js';
-import { CatalogError, type CatalogService } from './service.js';
+import type { CatalogService } from './service.js';
 
 const name = z.string().trim().min(1, 'El nombre es obligatorio.').max(120);
 const cents = z.number().int('El precio debe estar en centavos enteros.').min(0);
@@ -125,10 +125,4 @@ export function registerCatalogRoutes(
     const params = parse(idParams, req.params, reply);
     if (params) return catalog.removeBarcode(req.user!, params.id);
   });
-}
-
-/** Estado HTTP para errores del catálogo; undefined si el error no es de este módulo. */
-export function catalogErrorStatus(err: unknown): number | undefined {
-  if (!(err instanceof CatalogError)) return undefined;
-  return err.code === 'not_found' ? 404 : 409;
 }

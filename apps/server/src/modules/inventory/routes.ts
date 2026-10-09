@@ -2,7 +2,7 @@ import type { FastifyInstance, FastifyReply } from 'fastify';
 import { z } from 'zod';
 import { authGuard, requirePermission } from '../auth/routes.js';
 import type { AuthService } from '../auth/service.js';
-import { InventoryError, type InventoryService } from './service.js';
+import type { InventoryService } from './service.js';
 
 const idParams = z.object({ id: z.string().min(1) });
 const receiveBody = z.object({
@@ -68,10 +68,4 @@ export function registerInventoryRoutes(
         .send({ stock: inventory.adjust(req.user!, params.id, body.delta, body.reason) });
     }
   });
-}
-
-/** Traduce errores de inventario a HTTP. */
-export function inventoryErrorStatus(err: unknown): number | undefined {
-  if (!(err instanceof InventoryError)) return undefined;
-  return err.code === 'not_found' ? 404 : err.code === 'not_tracked' ? 409 : 400;
 }

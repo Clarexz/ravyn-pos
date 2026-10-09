@@ -1,18 +1,8 @@
 import { effectivePriceCents } from '@pos/core';
 import { auditLog, barcodes, categories, productVariants, products, type PosDb } from '@pos/db';
 import { and, asc, eq, inArray } from 'drizzle-orm';
+import { conflict, notFound } from '../../errors.js';
 import type { SessionUser } from '../auth/service.js';
-
-export type CatalogErrorCode = 'not_found' | 'duplicate_barcode' | 'duplicate_category';
-
-export class CatalogError extends Error {
-  constructor(
-    readonly code: CatalogErrorCode,
-    message: string,
-  ) {
-    super(message);
-  }
-}
 
 export interface VariantInput {
   name?: string | null;
@@ -103,7 +93,7 @@ export class CatalogService {
       .from(categories)
       .where(and(eq(categories.id, id), eq(categories.storeId, actor.storeId)))
       .get();
-    if (!existing) throw new CatalogError('not_found', 'La categoría no existe.');
+    if (!existing) throw notFound('not_found', 'La categoría no existe.');
     if (existing.name !== name) this.assertCategoryNameFree(actor, name);
     this.db
       .update(categories)
@@ -119,8 +109,7 @@ export class CatalogService {
       .from(categories)
       .where(and(eq(categories.storeId, actor.storeId), eq(categories.name, name)))
       .get();
-    if (dup)
-      throw new CatalogError('duplicate_category', 'Ya existe una categoría con ese nombre.');
+    if (dup) throw conflict('duplicate_category', 'Ya existe una categoría con ese nombre.');
   }
 
   // --- Productos ---
@@ -229,7 +218,7 @@ export class CatalogService {
         .from(barcodes)
         .where(and(eq(barcodes.id, barcodeId), eq(barcodes.storeId, actor.storeId)))
         .get();
-      if (!barcode) throw new CatalogError('not_found', 'El código de barras no existe.');
+      if (!barcode) throw notFound('not_found', 'El código de barras no existe.');
       const variant = this.findVariant(tx, actor, barcode.variantId);
       tx.delete(barcodes).where(eq(barcodes.id, barcodeId)).run();
       return variant.productId;
@@ -265,10 +254,7 @@ export class CatalogService {
       .where(and(eq(barcodes.storeId, actor.storeId), eq(barcodes.code, code)))
       .get();
     if (dup) {
-      throw new CatalogError(
-        'duplicate_barcode',
-        `El código ${code} ya está asignado a otro artículo.`,
-      );
+      throw conflict('duplicate_barcode', `El código ${code} ya está asignado a otro artículo.`);
     }
     tx.insert(barcodes)
       .values({ ...this.scope(actor), variantId, code })
@@ -281,7 +267,7 @@ export class CatalogService {
       .from(products)
       .where(and(eq(products.id, id), eq(products.storeId, actor.storeId)))
       .get();
-    if (!row) throw new CatalogError('not_found', 'El producto no existe.');
+    if (!row) throw notFound('not_found', 'El producto no existe.');
     return row;
   }
 
@@ -291,7 +277,7 @@ export class CatalogService {
       .from(productVariants)
       .where(and(eq(productVariants.id, id), eq(productVariants.storeId, actor.storeId)))
       .get();
-    if (!row) throw new CatalogError('not_found', 'La variante no existe.');
+    if (!row) throw notFound('not_found', 'La variante no existe.');
     return row;
   }
 
@@ -301,7 +287,7 @@ export class CatalogService {
       .from(categories)
       .where(and(eq(categories.id, id), eq(categories.storeId, actor.storeId)))
       .get();
-    if (!row) throw new CatalogError('not_found', 'La categoría no existe.');
+    if (!row) throw notFound('not_found', 'La categoría no existe.');
   }
 
   private audit(

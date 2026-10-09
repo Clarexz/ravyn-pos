@@ -4,12 +4,13 @@ import fastifyStatic from '@fastify/static';
 import fastifyWebsocket from '@fastify/websocket';
 import Fastify, { type FastifyInstance } from 'fastify';
 import type { PosDb } from '@pos/db';
+import { DomainError } from './errors.js';
 import type { Adapters } from './adapters/index.js';
 import { registerAuthRoutes } from './modules/auth/routes.js';
 import { AuthService } from './modules/auth/service.js';
-import { catalogErrorStatus, registerCatalogRoutes } from './modules/catalog/routes.js';
+import { registerCatalogRoutes } from './modules/catalog/routes.js';
 import { CatalogService } from './modules/catalog/service.js';
-import { inventoryErrorStatus, registerInventoryRoutes } from './modules/inventory/routes.js';
+import { registerInventoryRoutes } from './modules/inventory/routes.js';
 import { InventoryService } from './modules/inventory/service.js';
 
 export interface AppOptions {
@@ -28,10 +29,8 @@ export async function buildApp(options: AppOptions = {}): Promise<FastifyInstanc
 
   // Errores de negocio conocidos -> respuesta HTTP con mensaje en español.
   app.setErrorHandler((err, _req, reply) => {
-    const status = catalogErrorStatus(err) ?? inventoryErrorStatus(err);
-    if (status) {
-      const { message, code } = err as { message: string; code?: string };
-      return reply.code(status).send({ error: message, code });
+    if (err instanceof DomainError) {
+      return reply.code(err.status).send({ error: err.message, code: err.code });
     }
     return reply.send(err);
   });

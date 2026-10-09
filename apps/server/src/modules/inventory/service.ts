@@ -1,16 +1,8 @@
 import type { MovementType } from '@pos/core';
 import { auditLog, inventoryMovements, productVariants, products, type PosDb } from '@pos/db';
 import { and, asc, desc, eq, sql } from 'drizzle-orm';
+import { badRequest, conflict, notFound } from '../../errors.js';
 import type { SessionUser } from '../auth/service.js';
-
-export class InventoryError extends Error {
-  constructor(
-    readonly code: 'not_found' | 'not_tracked' | 'invalid_quantity',
-    message: string,
-  ) {
-    super(message);
-  }
-}
 
 type Tx = Parameters<Parameters<PosDb['transaction']>[0]>[0];
 type Db = PosDb | Tx;
@@ -31,7 +23,7 @@ export interface NewMovement {
  */
 export function insertMovement(tx: Db, actor: SessionUser, m: NewMovement): void {
   if (!Number.isSafeInteger(m.quantity) || m.quantity === 0) {
-    throw new InventoryError('invalid_quantity', 'La cantidad debe ser un entero distinto de 0.');
+    throw badRequest('invalid_quantity', 'La cantidad debe ser un entero distinto de 0.');
   }
   tx.insert(inventoryMovements)
     .values({
@@ -161,9 +153,9 @@ export class InventoryService {
       .innerJoin(products, eq(products.id, productVariants.productId))
       .where(and(eq(productVariants.id, variantId), eq(productVariants.storeId, actor.storeId)))
       .get();
-    if (!row) throw new InventoryError('not_found', 'La variante no existe.');
+    if (!row) throw notFound('not_found', 'La variante no existe.');
     if (!row.controls) {
-      throw new InventoryError('not_tracked', 'Este artículo no controla inventario.');
+      throw conflict('not_tracked', 'Este artículo no controla inventario.');
     }
   }
 }
