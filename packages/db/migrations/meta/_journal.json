@@ -29,6 +29,13 @@
       "when": 1791554302611,
       "tag": "0003_immutable_triggers",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "6",
+      "when": 1791554689080,
+      "tag": "0004_safe_ink",
+      "breakpoints": true
     }
   ]
 }

@@ -65,3 +65,11 @@ Variables: `POS_ADAPTERS=simulated`, `POS_SIM_PRINT_INTERVAL_MS` (trabajos de im
 - Ajustes: motivo obligatorio y registro en `audit_log` con `before`/`after`. Solo `inventory.adjust` (admin). El stock puede quedar negativo (se vende con 0 y solo se avisa).
 - Solo las variantes de productos con `controlsInventory` admiten movimientos; los servicios responden 409.
 - El manejo de errores de negocio (catálogo, inventario) está centralizado en `app.ts`.
+
+## T1.4 Recetas de consumo y precios de impresión
+
+- `print_prices`: precio por página, único por (color `bw`/`color`, tamaño `letter`/`legal`). Un cambio de precio escribe `audit_log`. Para nuevos tamaños basta ampliar `PRINT_SIZES`.
+- `recipes`: un destino (tipo de impresión **o** variante de servicio, exactamente uno, forzado con un CHECK) descuenta insumos × cantidad por unidad. La receta se reemplaza completa y cada cambio queda en `audit_log` (`recipe.change`).
+- Los insumos deben existir y controlar inventario. No hay recetas anidadas: un insumo no se expande a su propia receta.
+- `ConsumptionService.consume()` / `consumePrint()` reciben la transacción del llamador y generan movimientos `consumption` (cantidad negativa, con `refType`/`refId` del cobro o impresión). Se usan en T6.3 (cobrar o ignorar impresión) y en la venta de servicios. No hay endpoint de consumo: solo ocurre dentro de operaciones que ya tienen su transacción.
+- El precio cobrado por página sale de `print_prices`, no del catálogo de productos.

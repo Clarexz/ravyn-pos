@@ -10,6 +10,8 @@ import { registerAuthRoutes } from './modules/auth/routes.js';
 import { AuthService } from './modules/auth/service.js';
 import { registerCatalogRoutes } from './modules/catalog/routes.js';
 import { CatalogService } from './modules/catalog/service.js';
+import { registerConsumptionRoutes } from './modules/consumption/routes.js';
+import { ConsumptionService } from './modules/consumption/service.js';
 import { registerInventoryRoutes } from './modules/inventory/routes.js';
 import { InventoryService } from './modules/inventory/service.js';
 
@@ -41,6 +43,7 @@ export async function buildApp(options: AppOptions = {}): Promise<FastifyInstanc
     registerAuthRoutes(app, auth);
     registerCatalogRoutes(app, auth, new CatalogService(options.db));
     registerInventoryRoutes(app, auth, new InventoryService(options.db));
+    registerConsumptionRoutes(app, auth, new ConsumptionService(options.db));
   }
 
   const { adapters } = options;
