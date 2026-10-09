@@ -1,0 +1,67 @@
+import fs from 'node:fs';
+import path from 'node:path';
+import fastifyStatic from '@fastify/static';
+import fastifyWebsocket from '@fastify/websocket';
+import Fastify, { type FastifyInstance } from 'fastify';
+import type { Adapters } from './adapters/index.js';
+
+export interface AppOptions {
+  /** Carpeta con la SPA compilada (apps/pos/dist). Si no existe, solo se sirve la API. */
+  posDistDir?: string;
+  logger?: boolean;
+  adapters?: Adapters;
+}
+
+export async function buildApp(options: AppOptions = {}): Promise<FastifyInstance> {
+  const app = Fastify({ logger: options.logger ?? false });
+  await app.register(fastifyWebsocket);
+
+  app.get('/api/health', async () => ({ ok: true, service: 'pos-server', time: Date.now() }));
+
+  const { adapters } = options;
+  const broadcast = (message: unknown) => {
+    const data = JSON.stringify(message);
+    for (const client of app.websocketServer.clients) {
+      if (client.readyState === client.OPEN) client.send(data);
+    }
+  };
+
+  if (adapters) {
+    await adapters.printWatcher.start((job) => broadcast({ type: 'print_job', job }));
+    app.addHook('onClose', async () => adapters.printWatcher.stop());
+
+    // Solo en simulación: permite probar comprobantes y trabajos sin hardware.
+    if (adapters.mode === 'simulated') {
+      app.post('/api/dev/receipt', async () => {
+        await adapters.receiptPrinter.print({
+          title: 'PAPELERIA LAS FUENTES',
+          folio: 'F-000001',
+          lines: ['Engargolado             $35.00', 'Total                   $35.00'],
+        });
+        return { ok: true };
+      });
+    }
+  }
+
+  // Canal de eventos hacia la interfaz. "ping" -> "pong" sirve de prueba de vida.
+  app.get('/ws', { websocket: true }, (socket) => {
+    socket.send(JSON.stringify({ type: 'hello' }));
+    socket.on('message', (raw: Buffer) => {
+      if (raw.toString() === 'ping') socket.send(JSON.stringify({ type: 'pong' }));
+    });
+  });
+
+  const dist = options.posDistDir;
+  if (dist && fs.existsSync(path.join(dist, 'index.html'))) {
+    await app.register(fastifyStatic, { root: dist });
+    // Fallback de SPA: cualquier ruta que no sea /api ni /ws devuelve index.html.
+    app.setNotFoundHandler((req, reply) => {
+      if (req.url.startsWith('/api') || req.url.startsWith('/ws')) {
+        return reply.code(404).send({ error: 'No encontrado' });
+      }
+      return reply.sendFile('index.html');
+    });
+  }
+
+  return app;
+}
