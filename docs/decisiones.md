@@ -46,3 +46,13 @@ Variables: `POS_ADAPTERS=simulated`, `POS_SIM_PRINT_INTERVAL_MS` (trabajos de im
 - Matriz de permisos en `packages/core/src/permissions.ts` (`allow` / `admin_pin` / `deny`). `requirePermission` responde 403 con `requiresAdminPin: true` cuando el empleado puede proceder con PIN de admin; el PIN se valida en `POST /api/auth/admin-approval` (con su propio bloqueo).
 - `POST /api/setup` crea negocio, tienda y primer admin, solo si no existe ningún negocio.
 - Pendiente: la bitácora de cancelaciones/descuentos aprobados con PIN se escribe en T2.6; cambiar/desactivar usuarios llega con la pantalla de administración.
+
+## T1.2 Catálogo
+
+- Tablas: `categories`, `products`, `product_variants`, `barcodes`. El precio base vive en el producto; la variante lo hereda salvo que defina el suyo (`priceCents` null = hereda; 0 es un precio válido).
+- Un producto sin variantes crea una variante única sin nombre. "Controla inventario" es del producto (los servicios no controlan).
+- Un código de barras es único por tienda, en cualquier variante. Los productos y variantes no se borran, se desactivan (`active`); los códigos sí se pueden quitar y reutilizar. (Cuando existan ventas, el historial guarda variante y nombre al momento, no el código.)
+- Todo cambio de precio escribe `audit_log` (`price.change`, con `from`/`to`).
+- Lectura del catálogo: cualquier usuario con sesión. Escritura: permiso `catalog.manage` (solo admin).
+- Campos reservados sin pantalla: `volumePricing` y claves SAT en variantes.
+- El código de barras de `quick_codes` (T3.1) deberá validar que no choque con `barcodes`.

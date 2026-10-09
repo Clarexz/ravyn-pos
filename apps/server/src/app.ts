@@ -7,6 +7,8 @@ import type { PosDb } from '@pos/db';
 import type { Adapters } from './adapters/index.js';
 import { registerAuthRoutes } from './modules/auth/routes.js';
 import { AuthService } from './modules/auth/service.js';
+import { registerCatalogRoutes } from './modules/catalog/routes.js';
+import { CatalogService } from './modules/catalog/service.js';
 
 export interface AppOptions {
   /** Carpeta con la SPA compilada (apps/pos/dist). Si no existe, solo se sirve la API. */
@@ -26,6 +28,7 @@ export async function buildApp(options: AppOptions = {}): Promise<FastifyInstanc
     const auth = new AuthService(options.db);
     app.decorate('auth', auth);
     registerAuthRoutes(app, auth);
+    registerCatalogRoutes(app, auth, new CatalogService(options.db));
   }
 
   const { adapters } = options;
